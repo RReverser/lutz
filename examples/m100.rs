@@ -48,7 +48,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             max_y = max_y.max(pixel.y);
         }
 
-        let rect = imageproc::rect::Rect::at(min_x as i32, min_y as i32).of_size(max_x - min_x + 1, max_y - min_y + 1);
+        let rect = imageproc::rect::Rect::at(min_x as i32, min_y as i32)
+            .of_size(max_x - min_x + 1, max_y - min_y + 1);
         imageproc::drawing::draw_hollow_rect_mut(&mut img, rect, image::Rgba([255, 0, 0, 255]));
     });
     img.save("m100.out.png")?;

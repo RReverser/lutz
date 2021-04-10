@@ -29,7 +29,13 @@ pub enum CS {
 
 struct Range {
     start: usize,
-    end: Option<usize>,
+    end: usize,
+}
+
+impl From<usize> for Range {
+    fn from(start: usize) -> Self {
+        Self { start, end: start }
+    }
 }
 
 struct LutzObject<Pixel> {
@@ -105,10 +111,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Img::Pixel>)> LutzState<&'a Img, Img::P
             if range.is_none() {
                 // First pixel of object on the current scan.
                 self.marker[x] = Some(Marker::Start);
-                *range = Some(Range {
-                    start: x,
-                    end: None,
-                });
+                *range = Some(Range::from(x));
             } else {
                 self.marker[x] = Some(Marker::StartOfSegment);
             }
@@ -118,10 +121,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Img::Pixel>)> LutzState<&'a Img, Img::P
             self.marker[x] = Some(Marker::Start);
             self.ps = PS::Complete;
             self.obj_stack.push(LutzObject {
-                range: Some(Range {
-                    start: x,
-                    end: None,
-                }),
+                range: Some(Range::from(x)),
                 info: Vec::new(),
             });
         }
@@ -138,7 +138,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Img::Pixel>)> LutzState<&'a Img, Img::P
                 .range
                 .as_mut()
                 .unwrap()
-                .end = Some(x);
+                .end = x;
         } else {
             // End of the final segment of an object section.
             self.ps = self.ps_stack.pop().unwrap();
@@ -159,7 +159,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Img::Pixel>)> LutzState<&'a Img, Img::P
                     // Make the object the current object.
                     self.obj_stack.push(LutzObject {
                         range: None,
-                        info: self.store[x].clone(),
+                        info: std::mem::take(&mut self.store[x]),
                     });
                 } else {
                     // Append object to the current object.
@@ -167,7 +167,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Img::Pixel>)> LutzState<&'a Img, Img::P
                         .last_mut()
                         .unwrap()
                         .info
-                        .extend_from_slice(&self.store[x]);
+                        .extend(std::mem::take(&mut self.store[x]));
                 }
                 self.ps = PS::Object;
             }
@@ -182,10 +182,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Img::Pixel>)> LutzState<&'a Img, Img::P
                     new_top.info.extend(obj.info);
                     let k = obj.range.unwrap().start;
                     if new_top.range.is_none() {
-                        new_top.range = Some(Range {
-                            start: k,
-                            end: None,
-                        });
+                        new_top.range = Some(Range::from(k));
                     } else {
                         self.marker[k as usize] = Some(Marker::StartOfSegment);
                     }
@@ -209,7 +206,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Img::Pixel>)> LutzState<&'a Img, Img::P
                         }
                         Some(range) => {
                             // Object completed on this scan.
-                            self.marker[range.end.unwrap() as usize] = Some(Marker::End);
+                            self.marker[range.end as usize] = Some(Marker::End);
                             self.store[range.start as usize] = obj.info;
                         }
                     }
