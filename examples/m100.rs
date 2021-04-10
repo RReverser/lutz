@@ -31,9 +31,7 @@ impl lutz::Image for Image {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut img = image::open("m100.png")?;
-    lutz::lutz(&Image(img.to_luma8()), |mut pixels| {
-        pixels.sort();
-
+    lutz::lutz(&Image(img.to_luma8()), |pixels| {
         println!("{} {:?}", pixels.len(), pixels);
 
         let mut min_x = u32::max_value();
