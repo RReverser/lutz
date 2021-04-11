@@ -13,8 +13,6 @@ struct Pixel {
 struct Image(image::GrayImage);
 
 impl lutz::Image for Image {
-    type Pixel = Pixel;
-
     fn width(&self) -> usize {
         self.0.width() as _
     }
@@ -23,15 +21,8 @@ impl lutz::Image for Image {
         self.0.height() as _
     }
 
-    fn pixel(&self, x: usize, y: usize) -> Option<Self::Pixel> {
-        if self.0.get_pixel(x as _, y as _).0[0] > 170 {
-            Some(Pixel {
-                x: x as _,
-                y: y as _,
-            })
-        } else {
-            None
-        }
+    fn has_pixel(&self, x: usize, y: usize) -> bool {
+        self.0.get_pixel(x as _, y as _).0[0] > 170
     }
 }
 

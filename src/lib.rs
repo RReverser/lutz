@@ -1,28 +1,32 @@
 pub trait Image {
-    type Pixel: Clone;
-
     fn width(&self) -> usize;
     fn height(&self) -> usize;
-    fn pixel(&self, x: usize, y: usize) -> Option<Self::Pixel>;
+    fn has_pixel(&self, x: usize, y: usize) -> bool;
 }
 
 #[derive(PartialEq, Eq)]
-pub enum Marker {
+enum Marker {
     Start,
     StartOfSegment,
     EndOfSegment,
     End,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub struct Pixel {
+    pub x: usize,
+    pub y: usize,
+}
+
 #[derive(PartialEq, Eq, Clone, Copy)]
-pub enum PS {
+enum PS {
     Complete,
     Object,
     Incomplete,
 }
 
 #[derive(PartialEq, Eq)]
-pub enum CS {
+enum CS {
     NonObject,
     Object,
 }
@@ -38,23 +42,23 @@ impl From<usize> for Range {
     }
 }
 
-struct LutzObject<Pixel> {
+struct LutzObject {
     range: Option<Range>,
     info: Vec<Pixel>,
 }
 
-struct LutzState<Img, Pixel, OnObject> {
+struct LutzState<Img, OnObject> {
     img: Img,
     on_object: OnObject,
     marker: Box<[Option<Marker>]>,
-    obj_stack: Vec<LutzObject<Pixel>>,
+    obj_stack: Vec<LutzObject>,
     ps: PS,
     cs: CS,
     ps_stack: Vec<PS>,
     store: Box<[Vec<Pixel>]>,
 }
 
-impl<'a, Img: Image, OnObject: FnMut(Vec<Img::Pixel>)> LutzState<&'a Img, Img::Pixel, OnObject> {
+impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
     fn new(img: &'a Img, on_object: OnObject) -> Self {
         Self {
             img,
@@ -78,7 +82,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Img::Pixel>)> LutzState<&'a Img, Img::P
             self.cs = CS::NonObject;
             for x in 0..self.img.width() {
                 let newmarker = std::mem::take(&mut self.marker[x]);
-                if let Some(newsymbol) = self.img.pixel(x, y) {
+                if self.img.has_pixel(x, y) {
                     // Current pixel is part of an object.
                     if self.cs != CS::Object {
                         // Previous pixel is not part of an object, start a new segment.
@@ -88,7 +92,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Img::Pixel>)> LutzState<&'a Img, Img::P
                         self.process_new_marker(marker, x);
                     }
                     // Update current object by current pixel.
-                    self.obj_stack.last_mut().unwrap().info.push(newsymbol);
+                    self.obj_stack.last_mut().unwrap().info.push(Pixel { x, y });
                 } else {
                     // Current pixel is not part of an object.
                     if let Some(marker) = newmarker {
@@ -217,6 +221,6 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Img::Pixel>)> LutzState<&'a Img, Img::P
     }
 }
 
-pub fn lutz<P>(img: &impl Image<Pixel = P>, on_object: impl FnMut(Vec<P>)) {
+pub fn lutz(img: &impl Image, on_object: impl FnMut(Vec<Pixel>)) {
     LutzState::new(img, on_object).run()
 }
