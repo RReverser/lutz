@@ -1,6 +1,7 @@
 use iai::main;
-use peak_alloc::PeakAlloc;
+use image::GenericImageView;
 use once_cell::sync::OnceCell;
+use peak_alloc::PeakAlloc;
 
 #[global_allocator]
 static PEAK_ALLOC: PeakAlloc = PeakAlloc;
@@ -23,7 +24,7 @@ impl lutz::Image for Image {
     }
 
     fn has_pixel(&self, x: usize, y: usize) -> bool {
-        self.0.get_pixel(x as _, y as _).0[0] > 170
+        unsafe { self.0.unsafe_get_pixel(x as _, y as _) }.0[0] > 170
     }
 }
 
@@ -39,7 +40,8 @@ fn m100() -> Vec<Vec<lutz::Pixel>> {
 }
 
 fn main() {
-    IMG.set(Image(image::open("m100.png").unwrap().into_luma8())).unwrap_or_else(|_| unreachable!());
+    IMG.set(Image(image::open("m100.png").unwrap().into_luma8()))
+        .unwrap_or_else(|_| unreachable!());
     main!(m100);
     main()
 }
