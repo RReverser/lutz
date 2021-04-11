@@ -1,7 +1,7 @@
 pub trait Image {
-    fn width(&self) -> usize;
-    fn height(&self) -> usize;
-    fn has_pixel(&self, x: usize, y: usize) -> bool;
+    fn width(&self) -> u32;
+    fn height(&self) -> u32;
+    fn has_pixel(&self, x: u32, y: u32) -> bool;
 }
 
 #[derive(PartialEq, Eq)]
@@ -14,8 +14,8 @@ enum Marker {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Pixel {
-    pub x: usize,
-    pub y: usize,
+    pub x: u32,
+    pub y: u32,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -32,12 +32,12 @@ enum CS {
 }
 
 struct Range {
-    start: usize,
-    end: usize,
+    start: u32,
+    end: u32,
 }
 
-impl From<usize> for Range {
-    fn from(start: usize) -> Self {
+impl From<u32> for Range {
+    fn from(start: u32) -> Self {
         Self { start, end: start }
     }
 }
@@ -64,14 +64,14 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
             img,
             on_object,
             marker: std::iter::repeat_with(|| None)
-                .take(img.width() + 1)
+                .take(img.width() as usize + 1)
                 .collect(),
             obj_stack: Vec::new(),
             ps: PS::Complete,
             cs: CS::NonObject,
             ps_stack: Vec::new(),
             store: std::iter::repeat_with(Vec::new)
-                .take(img.width() + 1)
+                .take(img.width() as usize + 1)
                 .collect(),
         }
     }
@@ -82,7 +82,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
             self.ps = PS::Complete;
             self.cs = CS::NonObject;
             for x in 0..width {
-                let newmarker = std::mem::take(&mut self.marker[x]);
+                let newmarker = std::mem::take(&mut self.marker[x as usize]);
                 if self.img.has_pixel(x, y) {
                     // Current pixel is part of an object.
                     if self.cs != CS::Object {
@@ -107,7 +107,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
             }
             // Handle the extra "M+1" cell from the algorithm
             // (same logic as in the loop above, but without first branch).
-            if let Some(marker) = std::mem::take(&mut self.marker[width]) {
+            if let Some(marker) = std::mem::take(&mut self.marker[width as usize]) {
                 self.process_new_marker(marker, width);
             }
             if self.cs == CS::Object {
@@ -116,9 +116,9 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
         }
     }
 
-    fn start_segment(&mut self, x: usize) {
+    fn start_segment(&mut self, x: u32) {
         self.cs = CS::Object;
-        self.marker[x] = Some(if self.ps == PS::Object {
+        self.marker[x as usize] = Some(if self.ps == PS::Object {
             // Pixel touches segment on the preceding scan.
             let range = &mut self.obj_stack.last_mut().unwrap().range;
             if range.is_none() {
@@ -140,9 +140,9 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
         });
     }
 
-    fn end_segment(&mut self, x: usize) {
+    fn end_segment(&mut self, x: u32) {
         self.cs = CS::NonObject;
-        self.marker[x] = Some(if self.ps != PS::Complete {
+        self.marker[x as usize] = Some(if self.ps != PS::Complete {
             // End of a segment but not necessarily of a section.
             self.obj_stack
                 .last_mut()
@@ -156,17 +156,17 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
             // End of the final segment of an object section.
             self.ps = self.ps_stack.pop().unwrap();
             let obj = self.obj_stack.pop().unwrap();
-            self.store[obj.range.unwrap().start] = obj.info;
+            self.store[obj.range.unwrap().start as usize] = obj.info;
             Marker::End
         });
     }
 
-    fn process_new_marker(&mut self, newmarker: Marker, x: usize) {
+    fn process_new_marker(&mut self, newmarker: Marker, x: u32) {
         self.ps = match newmarker {
             Marker::Start => {
                 // Start of an object on the preceding scan.
                 self.ps_stack.push(self.ps);
-                let store = std::mem::take(&mut self.store[x]);
+                let store = std::mem::take(&mut self.store[x as usize]);
                 if self.cs == CS::NonObject {
                     // First encounter with this object.
                     self.ps_stack.push(PS::Complete);
@@ -194,7 +194,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
                     if new_top.range.is_none() {
                         new_top.range = Some(Range::from(k));
                     } else {
-                        self.marker[k] = Some(Marker::StartOfSegment);
+                        self.marker[k as usize] = Some(Marker::StartOfSegment);
                     }
                 }
                 PS::Object
@@ -214,8 +214,8 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
                         }
                         Some(range) => {
                             // Object completed on this scan.
-                            self.marker[range.end] = Some(Marker::End);
-                            self.store[range.start] = obj.info;
+                            self.marker[range.end as usize] = Some(Marker::End);
+                            self.store[range.start as usize] = obj.info;
                         }
                     }
                     self.ps_stack.pop().unwrap()

@@ -15,16 +15,16 @@ struct Pixel {
 struct Image(image::GrayImage);
 
 impl lutz::Image for Image {
-    fn width(&self) -> usize {
-        self.0.width() as _
+    fn width(&self) -> u32 {
+        self.0.width()
     }
 
-    fn height(&self) -> usize {
-        self.0.height() as _
+    fn height(&self) -> u32 {
+        self.0.height()
     }
 
-    fn has_pixel(&self, x: usize, y: usize) -> bool {
-        unsafe { self.0.unsafe_get_pixel(x as _, y as _) }.0[0] > 170
+    fn has_pixel(&self, x: u32, y: u32) -> bool {
+        unsafe { self.0.unsafe_get_pixel(x, y) }.0[0] > 170
     }
 }
 
