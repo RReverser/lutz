@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use iai::main;
 use peak_alloc::PeakAlloc;
 
 #[global_allocator]
@@ -26,22 +26,13 @@ impl lutz::Image for Image {
     }
 }
 
-fn m100(c: &mut Criterion) {
-    c.bench_with_input(
-        BenchmarkId::new("lutz", "m100"),
-        &Image(image::open("m100.png").unwrap().into_luma8()),
-        |b, img| {
-            b.iter(|| {
-                let mut res = Vec::new();
-                lutz::lutz(img, |pixels| {
-                    res.push(pixels);
-                });
-                res
-            });
-        },
-    );
-    println!("Peak usage: {} MB", PEAK_ALLOC.peak_usage_as_mb());
+fn m100() -> Vec<Vec<lutz::Pixel>> {
+    let img = &Image(image::open("m100.png").unwrap().into_luma8());
+    let mut res = Vec::new();
+    lutz::lutz(img, |pixels| {
+        res.push(pixels);
+    });
+    res
 }
 
-criterion_group!(benches, m100);
-criterion_main!(benches);
+main!(m100);
