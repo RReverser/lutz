@@ -1,18 +1,28 @@
 [package]
 name = "lutz"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Ingvar Stepanyan <me@rreverser.com>"]
+license = "MIT"
+description = "Rust implementation of \"An Algorithm for the Real Time Analysis of Digitised Images\" by R. K. Lutz"
+readme = "README.md"
+repository = "https://github.com/RReverser/lutz"
+keywords = ["image", "vision", "labeling"]
+categories = ["algorithms", "computer-vision", "science"]
+exclude = ["examples"]
 
 [dev-dependencies]
 image = "0.23.14"
 imageproc = "0.22.0"
-criterion = "0.3"
-peak_alloc = "0.1.0"
 iai = "0.1"
 once_cell = "1.7.2"
 
 [[bench]]
 name = "bench"
 harness = false
+
+[features]
+nightly = []
+
+[package.metadata.docs.rs]
+features = ["nightly"]

@@ -1,6 +1,19 @@
+#![cfg_attr(
+    feature = "nightly",
+    feature(external_doc),
+    deny(missing_docs),
+    doc(include = "../README.md")
+)]
+
+/// A trait used to simulate monochrome images.
 pub trait Image {
+    /// Width of the image.
     fn width(&self) -> u32;
+
+    /// Height of the image.
     fn height(&self) -> u32;
+
+    /// Is this pixel considered set or empty.
     fn has_pixel(&self, x: u32, y: u32) -> bool;
 }
 
@@ -12,7 +25,9 @@ enum Marker {
     End,
 }
 
+#[allow(missing_docs)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+/// Pixel coordinates returned to the caller.
 pub struct Pixel {
     pub x: u32,
     pub y: u32,
@@ -227,6 +242,8 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
     }
 }
 
+/// Main function that performs object detection in the provided image.
+/// `on_object` is a callback that will be invoked for each found object (set of connected pixels).
 pub fn lutz(img: &impl Image, on_object: impl FnMut(Vec<Pixel>)) {
     LutzState::new(img, on_object).run()
 }

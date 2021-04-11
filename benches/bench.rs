@@ -1,10 +1,6 @@
 use iai::main;
 use image::GenericImageView;
 use once_cell::sync::OnceCell;
-use peak_alloc::PeakAlloc;
-
-#[global_allocator]
-static PEAK_ALLOC: PeakAlloc = PeakAlloc;
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
 struct Pixel {
