@@ -40,8 +40,10 @@ fn m100() -> Vec<Vec<lutz::Pixel>> {
 }
 
 fn main() {
-    IMG.set(Image(image::open("m100.png").unwrap().into_luma8()))
-        .unwrap_or_else(|_| unreachable!());
+    IMG.set(Image(
+        image::open("examples/m100.png").unwrap().into_luma8(),
+    ))
+    .unwrap_or_else(|_| unreachable!());
     main!(m100);
     main()
 }

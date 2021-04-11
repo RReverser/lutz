@@ -1,3 +1,6 @@
+use std::fs::File;
+use std::io::Write;
+
 struct Image(image::GrayImage);
 
 impl lutz::Image for Image {
@@ -15,9 +18,10 @@ impl lutz::Image for Image {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut img = image::open("m100.png")?;
+    let mut log = File::create("examples/m100.log")?;
+    let mut img = image::open("examples/m100.png")?;
     lutz::lutz(&Image(img.to_luma8()), |pixels| {
-        println!("{} {:?}", pixels.len(), pixels);
+        writeln!(log, "{} {:?}", pixels.len(), pixels).unwrap();
 
         let mut min_x = usize::max_value();
         let mut min_y = usize::max_value();
@@ -35,6 +39,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .of_size((max_x - min_x + 1) as u32, (max_y - min_y + 1) as u32);
         imageproc::drawing::draw_hollow_rect_mut(&mut img, rect, image::Rgba([255, 0, 0, 255]));
     });
-    img.save("m100.out.png")?;
+    img.save("examples/m100.out.png")?;
     Ok(())
 }
