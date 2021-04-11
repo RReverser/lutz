@@ -64,14 +64,14 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
             img,
             on_object,
             marker: std::iter::repeat_with(|| None)
-                .take(img.width() as usize)
+                .take(img.width())
                 .collect(),
             obj_stack: Vec::new(),
             ps: PS::Complete,
             cs: CS::NonObject,
             ps_stack: Vec::new(),
             store: std::iter::repeat_with(Vec::new)
-                .take(img.width() as usize)
+                .take(img.width())
                 .collect(),
         }
     }
@@ -147,7 +147,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
             // End of the final segment of an object section.
             self.ps = self.ps_stack.pop().unwrap();
             let obj = self.obj_stack.pop().unwrap();
-            self.store[obj.range.unwrap().start as usize] = obj.info;
+            self.store[obj.range.unwrap().start] = obj.info;
             Marker::End
         });
     }
@@ -189,7 +189,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
                     if new_top.range.is_none() {
                         new_top.range = Some(Range::from(k));
                     } else {
-                        self.marker[k as usize] = Some(Marker::StartOfSegment);
+                        self.marker[k] = Some(Marker::StartOfSegment);
                     }
                 }
                 PS::Object
@@ -211,8 +211,8 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
                         }
                         Some(range) => {
                             // Object completed on this scan.
-                            self.marker[range.end as usize] = Some(Marker::End);
-                            self.store[range.start as usize] = obj.info;
+                            self.marker[range.end] = Some(Marker::End);
+                            self.store[range.start] = obj.info;
                         }
                     }
                     self.ps_stack.pop().unwrap()
