@@ -76,7 +76,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
         }
     }
 
-    fn run(&mut self) {
+    fn run(mut self) {
         let width = self.img.width();
         for y in 0..self.img.height() {
             self.ps = PS::Complete;
@@ -177,11 +177,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
                     });
                 } else {
                     // Append object to the current object.
-                    self.obj_stack
-                        .last_mut()
-                        .unwrap()
-                        .info
-                        .extend(store);
+                    self.obj_stack.last_mut().unwrap().info.extend(store);
                 }
                 PS::Object
             }
@@ -203,9 +199,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
                 }
                 PS::Object
             }
-            Marker::EndOfSegment => {
-                PS::Incomplete
-            }
+            Marker::EndOfSegment => PS::Incomplete,
             // Note: there is a typo in the paper, this needs to be 'F' (end) not 'F[0]' again (end of segment).
             Marker::End => {
                 // End of an object on the preceding scan.
