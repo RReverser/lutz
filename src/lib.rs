@@ -82,7 +82,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
             self.ps = PS::Complete;
             self.cs = CS::NonObject;
             for x in 0..width {
-                let newmarker = std::mem::take(&mut self.marker[x as usize]);
+                let newmarker = self.marker[x as usize].take();
                 if self.img.has_pixel(x, y) {
                     // Current pixel is part of an object.
                     if self.cs != CS::Object {
@@ -107,7 +107,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
             }
             // Handle the extra "M+1" cell from the algorithm
             // (same logic as in the loop above, but without first branch).
-            if let Some(marker) = std::mem::take(&mut self.marker[width as usize]) {
+            if let Some(marker) = self.marker[width as usize].take() {
                 self.process_new_marker(marker, width);
             }
             if self.cs == CS::Object {
