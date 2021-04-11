@@ -1,5 +1,6 @@
 use iai::main;
 use peak_alloc::PeakAlloc;
+use once_cell::sync::OnceCell;
 
 #[global_allocator]
 static PEAK_ALLOC: PeakAlloc = PeakAlloc;
@@ -26,8 +27,10 @@ impl lutz::Image for Image {
     }
 }
 
+static IMG: OnceCell<Image> = OnceCell::new();
+
 fn m100() -> Vec<Vec<lutz::Pixel>> {
-    let img = &Image(image::open("m100.png").unwrap().into_luma8());
+    let img = IMG.get().unwrap();
     let mut res = Vec::new();
     lutz::lutz(img, |pixels| {
         res.push(pixels);
@@ -35,4 +38,8 @@ fn m100() -> Vec<Vec<lutz::Pixel>> {
     res
 }
 
-main!(m100);
+fn main() {
+    IMG.set(Image(image::open("m100.png").unwrap().into_luma8())).unwrap_or_else(|_| unreachable!());
+    main!(m100);
+    main()
+}
