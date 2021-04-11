@@ -64,23 +64,24 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
             img,
             on_object,
             marker: std::iter::repeat_with(|| None)
-                .take(img.width())
+                .take(img.width() + 1)
                 .collect(),
             obj_stack: Vec::new(),
             ps: PS::Complete,
             cs: CS::NonObject,
             ps_stack: Vec::new(),
             store: std::iter::repeat_with(Vec::new)
-                .take(img.width())
+                .take(img.width() + 1)
                 .collect(),
         }
     }
 
     fn run(&mut self) {
+        let width = self.img.width();
         for y in 0..self.img.height() {
             self.ps = PS::Complete;
             self.cs = CS::NonObject;
-            for x in 0..self.img.width() {
+            for x in 0..width {
                 let newmarker = std::mem::take(&mut self.marker[x]);
                 if self.img.has_pixel(x, y) {
                     // Current pixel is part of an object.
@@ -103,6 +104,14 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
                         self.end_segment(x);
                     }
                 }
+            }
+            // Handle the extra "M+1" cell from the algorithm
+            // (same logic as in the loop above, but without first branch).
+            if let Some(marker) = std::mem::take(&mut self.marker[width]) {
+                self.process_new_marker(marker, width);
+            }
+            if self.cs == CS::Object {
+                self.end_segment(width);
             }
         }
     }
