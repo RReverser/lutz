@@ -6,6 +6,7 @@
 )]
 
 /// A trait used to simulate monochrome images.
+#[auto_impl::auto_impl(&, &mut, Box, Rc, Arc)]
 pub trait Image {
     /// Width of the image.
     fn width(&self) -> u32;
@@ -73,10 +74,9 @@ struct LutzState<Img> {
     store: Box<[Vec<Pixel>]>,
 }
 
-impl<'a, Img: Image> LutzState<&'a Img> {
-    fn new(img: &'a Img, co: genawaiter::rc::Co<Vec<Pixel>>) -> Self {
+impl<Img: Image> LutzState<Img> {
+    fn new(img: Img, co: genawaiter::rc::Co<Vec<Pixel>>) -> Self {
         Self {
-            img,
             co,
             marker: std::iter::repeat_with(|| None)
                 .take(img.width() as usize + 1)
@@ -88,6 +88,7 @@ impl<'a, Img: Image> LutzState<&'a Img> {
             store: std::iter::repeat_with(Vec::new)
                 .take(img.width() as usize + 1)
                 .collect(),
+            img,
         }
     }
 
@@ -243,6 +244,6 @@ impl<'a, Img: Image> LutzState<&'a Img> {
 }
 
 /// Main function that performs object detection in the provided image.
-pub fn lutz(img: &impl Image) -> impl '_ + IntoIterator<Item = Vec<Pixel>> {
+pub fn lutz(img: impl Image) -> impl IntoIterator<Item = Vec<Pixel>> {
     genawaiter::rc::Gen::new(move |co| LutzState::new(img, co).run())
 }
