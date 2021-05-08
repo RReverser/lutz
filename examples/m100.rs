@@ -20,15 +20,15 @@ impl lutz::Image for Image {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut log = File::create("examples/m100.log")?;
     let mut img = image::open("examples/m100.png")?;
-    lutz::lutz(&Image(img.to_luma8()), |pixels| {
-        writeln!(log, "{} {:?}", pixels.len(), pixels).unwrap();
+    for obj_pixels in lutz::lutz(&Image(img.to_luma8())) {
+        writeln!(log, "{} {:?}", obj_pixels.len(), obj_pixels)?;
 
         let mut min_x = u32::max_value();
         let mut min_y = u32::max_value();
         let mut max_x = 0;
         let mut max_y = 0;
 
-        for pixel in pixels {
+        for pixel in obj_pixels {
             min_x = min_x.min(pixel.x);
             min_y = min_y.min(pixel.y);
             max_x = max_x.max(pixel.x);
@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let rect = imageproc::rect::Rect::at(min_x as i32, min_y as i32)
             .of_size((max_x - min_x + 1) as u32, (max_y - min_y + 1) as u32);
         imageproc::drawing::draw_hollow_rect_mut(&mut img, rect, image::Rgba([255, 0, 0, 255]));
-    });
+    }
     img.save("examples/m100.out.png")?;
     Ok(())
 }

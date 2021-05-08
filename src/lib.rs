@@ -62,9 +62,9 @@ struct LutzObject {
     info: Vec<Pixel>,
 }
 
-struct LutzState<Img, OnObject> {
+struct LutzState<Img> {
     img: Img,
-    on_object: OnObject,
+    co: genawaiter::rc::Co<Vec<Pixel>>,
     marker: Box<[Option<Marker>]>,
     obj_stack: Vec<LutzObject>,
     ps: PS,
@@ -73,11 +73,11 @@ struct LutzState<Img, OnObject> {
     store: Box<[Vec<Pixel>]>,
 }
 
-impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
-    fn new(img: &'a Img, on_object: OnObject) -> Self {
+impl<'a, Img: Image> LutzState<&'a Img> {
+    fn new(img: &'a Img, co: genawaiter::rc::Co<Vec<Pixel>>) -> Self {
         Self {
             img,
-            on_object,
+            co,
             marker: std::iter::repeat_with(|| None)
                 .take(img.width() as usize + 1)
                 .collect(),
@@ -91,7 +91,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
         }
     }
 
-    fn run(mut self) {
+    async fn run(mut self) {
         let width = self.img.width();
         for y in 0..self.img.height() {
             self.ps = PS::Complete;
@@ -105,14 +105,14 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
                         self.start_segment(x);
                     }
                     if let Some(marker) = newmarker {
-                        self.process_new_marker(marker, x);
+                        self.process_new_marker(marker, x).await;
                     }
                     // Update current object by current pixel.
                     self.obj_stack.last_mut().unwrap().info.push(Pixel { x, y });
                 } else {
                     // Current pixel is not part of an object.
                     if let Some(marker) = newmarker {
-                        self.process_new_marker(marker, x);
+                        self.process_new_marker(marker, x).await;
                     }
                     if self.cs == CS::Object {
                         // Previous pixel was part of an object, finish segment.
@@ -123,7 +123,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
             // Handle the extra "M+1" cell from the algorithm
             // (same logic as in the loop above, but without first branch).
             if let Some(marker) = self.marker[width as usize].take() {
-                self.process_new_marker(marker, width);
+                self.process_new_marker(marker, width).await;
             }
             if self.cs == CS::Object {
                 self.end_segment(width);
@@ -176,7 +176,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
         });
     }
 
-    fn process_new_marker(&mut self, newmarker: Marker, x: u32) {
+    async fn process_new_marker(&mut self, newmarker: Marker, x: u32) {
         self.ps = match newmarker {
             Marker::Start => {
                 // Start of an object on the preceding scan.
@@ -225,7 +225,7 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
                     match obj.range {
                         None => {
                             // Object completed.
-                            (self.on_object)(obj.info);
+                            self.co.yield_(obj.info).await;
                         }
                         Some(range) => {
                             // Object completed on this scan.
@@ -243,7 +243,6 @@ impl<'a, Img: Image, OnObject: FnMut(Vec<Pixel>)> LutzState<&'a Img, OnObject> {
 }
 
 /// Main function that performs object detection in the provided image.
-/// `on_object` is a callback that will be invoked for each found object (set of connected pixels).
-pub fn lutz(img: &impl Image, on_object: impl FnMut(Vec<Pixel>)) {
-    LutzState::new(img, on_object).run()
+pub fn lutz(img: &impl Image) -> impl '_ + IntoIterator<Item = Vec<Pixel>> {
+    genawaiter::rc::Gen::new(move |co| LutzState::new(img, co).run())
 }

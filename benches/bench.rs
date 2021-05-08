@@ -29,9 +29,9 @@ static IMG: OnceCell<Image> = OnceCell::new();
 fn m100() -> Vec<Vec<lutz::Pixel>> {
     let img = IMG.get().unwrap();
     let mut res = Vec::new();
-    lutz::lutz(img, |pixels| {
-        res.push(pixels);
-    });
+    for obj_pixels in lutz::lutz(img) {
+        res.push(obj_pixels);
+    }
     res
 }
 
