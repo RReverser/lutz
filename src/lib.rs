@@ -63,7 +63,7 @@ struct LutzObject<Pixels> {
     pixels: Pixels,
 }
 
-struct LutzState<Img, Pixels: PixelFolder<Img> = Vec<Pixel>> {
+struct LutzState<Img, Pixels: PixelFolder<Img>> {
     img: Img,
     co: genawaiter::rc::Co<Pixels>,
     marker: Box<[Option<Marker>]>,
@@ -90,8 +90,8 @@ impl<T: Default + Extend<Pixel> + IntoIterator<Item = Pixel>, Img> PixelFolder<I
     }
 }
 
-impl<Img: Image, ObjPixels: PixelFolder<Img>> LutzState<Img, ObjPixels> {
-    fn new(img: Img, co: genawaiter::rc::Co<ObjPixels>) -> Self {
+impl<Img: Image, Pixels: PixelFolder<Img>> LutzState<Img, Pixels> {
+    fn new(img: Img, co: genawaiter::rc::Co<Pixels>) -> Self {
         Self {
             co,
             marker: std::iter::repeat_with(|| None)
@@ -264,6 +264,6 @@ impl<Img: Image, ObjPixels: PixelFolder<Img>> LutzState<Img, ObjPixels> {
 }
 
 /// Main function that performs object detection in the provided image.
-pub fn lutz(img: impl Image) -> impl IntoIterator<Item = Vec<Pixel>> {
+pub fn lutz<Img: Image, Pixels: PixelFolder<Img>>(img: Img) -> impl IntoIterator<Item = Pixels> {
     genawaiter::rc::Gen::new(move |co| LutzState::new(img, co).run())
 }

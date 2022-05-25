@@ -20,7 +20,7 @@ impl lutz::Image for Image {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut log = File::create("examples/m100.log")?;
     let mut img = image::open("examples/m100.png")?;
-    for obj_pixels in lutz::lutz(&Image(img.to_luma8())) {
+    for obj_pixels in lutz::lutz::<_, Vec<_>>(&Image(img.to_luma8())) {
         writeln!(log, "{} {:?}", obj_pixels.len(), obj_pixels)?;
 
         let mut min_x = u32::max_value();
