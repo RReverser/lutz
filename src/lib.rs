@@ -58,24 +58,40 @@ impl From<u32> for Range {
     }
 }
 
-struct LutzObject {
+struct LutzObject<Pixels> {
     range: Option<Range>,
-    info: Vec<Pixel>,
+    pixels: Pixels,
 }
 
-struct LutzState<Img> {
+struct LutzState<Img, Pixels: PixelFolder = Vec<Pixel>> {
     img: Img,
-    co: genawaiter::rc::Co<Vec<Pixel>>,
+    co: genawaiter::rc::Co<Pixels>,
     marker: Box<[Option<Marker>]>,
-    obj_stack: Vec<LutzObject>,
+    obj_stack: Vec<LutzObject<Pixels>>,
     ps: PS,
     cs: CS,
     ps_stack: Vec<PS>,
-    store: Box<[Vec<Pixel>]>,
+    store: Box<[Pixels]>,
 }
 
-impl<Img: Image> LutzState<Img> {
-    fn new(img: Img, co: genawaiter::rc::Co<Vec<Pixel>>) -> Self {
+pub trait PixelFolder: Default {
+    fn extend_one(&mut self, item: Pixel);
+    fn extend(&mut self, other: Self);
+}
+
+// Default implementation for collections like Vec<Pixel>.
+impl<T: Default + Extend<Pixel> + IntoIterator<Item = Pixel>> PixelFolder for T {
+    fn extend_one(&mut self, item: Pixel) {
+        <T as Extend<_>>::extend(self, std::iter::once(item));
+    }
+
+    fn extend(&mut self, other: Self) {
+        <T as Extend<_>>::extend(self, other);
+    }
+}
+
+impl<Img: Image, ObjPixels: PixelFolder> LutzState<Img, ObjPixels> {
+    fn new(img: Img, co: genawaiter::rc::Co<ObjPixels>) -> Self {
         Self {
             co,
             marker: std::iter::repeat_with(|| None)
@@ -85,7 +101,7 @@ impl<Img: Image> LutzState<Img> {
             ps: PS::Complete,
             cs: CS::NonObject,
             ps_stack: Vec::new(),
-            store: std::iter::repeat_with(Vec::new)
+            store: std::iter::repeat_with(Default::default)
                 .take(img.width() as usize + 1)
                 .collect(),
             img,
@@ -109,7 +125,11 @@ impl<Img: Image> LutzState<Img> {
                         self.process_new_marker(marker, x).await;
                     }
                     // Update current object by current pixel.
-                    self.obj_stack.last_mut().unwrap().info.push(Pixel { x, y });
+                    self.obj_stack
+                        .last_mut()
+                        .unwrap()
+                        .pixels
+                        .extend_one(Pixel { x, y });
                 } else {
                     // Current pixel is not part of an object.
                     if let Some(marker) = newmarker {
@@ -150,7 +170,7 @@ impl<Img: Image> LutzState<Img> {
             self.ps = PS::Complete;
             self.obj_stack.push(LutzObject {
                 range: Some(Range::from(x)),
-                info: Vec::new(),
+                pixels: Default::default(),
             });
             Marker::Start
         });
@@ -172,7 +192,7 @@ impl<Img: Image> LutzState<Img> {
             // End of the final segment of an object section.
             self.ps = self.ps_stack.pop().unwrap();
             let obj = self.obj_stack.pop().unwrap();
-            self.store[obj.range.unwrap().start as usize] = obj.info;
+            self.store[obj.range.unwrap().start as usize] = obj.pixels;
             Marker::End
         });
     }
@@ -189,11 +209,11 @@ impl<Img: Image> LutzState<Img> {
                     // Make the object the current object.
                     self.obj_stack.push(LutzObject {
                         range: None,
-                        info: store,
+                        pixels: store,
                     });
                 } else {
                     // Append object to the current object.
-                    self.obj_stack.last_mut().unwrap().info.extend(store);
+                    self.obj_stack.last_mut().unwrap().pixels.extend(store);
                 }
                 PS::Object
             }
@@ -205,7 +225,7 @@ impl<Img: Image> LutzState<Img> {
                     let obj = self.obj_stack.pop().unwrap();
                     // Join the two objects.
                     let new_top = self.obj_stack.last_mut().unwrap();
-                    new_top.info.extend(obj.info);
+                    new_top.pixels.extend(obj.pixels);
                     let k = obj.range.unwrap().start;
                     if new_top.range.is_none() {
                         new_top.range = Some(Range::from(k));
@@ -226,12 +246,12 @@ impl<Img: Image> LutzState<Img> {
                     match obj.range {
                         None => {
                             // Object completed.
-                            self.co.yield_(obj.info).await;
+                            self.co.yield_(obj.pixels).await;
                         }
                         Some(range) => {
                             // Object completed on this scan.
                             self.marker[range.end as usize] = Some(Marker::End);
-                            self.store[range.start as usize] = obj.info;
+                            self.store[range.start as usize] = obj.pixels;
                         }
                     }
                     self.ps_stack.pop().unwrap()
