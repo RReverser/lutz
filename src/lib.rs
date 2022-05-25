@@ -63,7 +63,7 @@ struct LutzObject<Pixels> {
     pixels: Pixels,
 }
 
-struct LutzState<Img, Pixels: PixelFolder = Vec<Pixel>> {
+struct LutzState<Img, Pixels: PixelFolder<Img> = Vec<Pixel>> {
     img: Img,
     co: genawaiter::rc::Co<Pixels>,
     marker: Box<[Option<Marker>]>,
@@ -74,23 +74,23 @@ struct LutzState<Img, Pixels: PixelFolder = Vec<Pixel>> {
     store: Box<[Pixels]>,
 }
 
-pub trait PixelFolder: Default {
-    fn extend_one(&mut self, item: Pixel);
-    fn extend(&mut self, other: Self);
+pub trait PixelFolder<Img>: Default {
+    fn push(&mut self, pixel: Pixel, image: &Img);
+    fn merge(&mut self, other: Self);
 }
 
 // Default implementation for collections like Vec<Pixel>.
-impl<T: Default + Extend<Pixel> + IntoIterator<Item = Pixel>> PixelFolder for T {
-    fn extend_one(&mut self, item: Pixel) {
-        <T as Extend<_>>::extend(self, std::iter::once(item));
+impl<T: Default + Extend<Pixel> + IntoIterator<Item = Pixel>, Img> PixelFolder<Img> for T {
+    fn push(&mut self, item: Pixel, _image: &Img) {
+        self.extend(std::iter::once(item));
     }
 
-    fn extend(&mut self, other: Self) {
-        <T as Extend<_>>::extend(self, other);
+    fn merge(&mut self, other: Self) {
+        self.extend(other);
     }
 }
 
-impl<Img: Image, ObjPixels: PixelFolder> LutzState<Img, ObjPixels> {
+impl<Img: Image, ObjPixels: PixelFolder<Img>> LutzState<Img, ObjPixels> {
     fn new(img: Img, co: genawaiter::rc::Co<ObjPixels>) -> Self {
         Self {
             co,
@@ -129,7 +129,7 @@ impl<Img: Image, ObjPixels: PixelFolder> LutzState<Img, ObjPixels> {
                         .last_mut()
                         .unwrap()
                         .pixels
-                        .extend_one(Pixel { x, y });
+                        .push(Pixel { x, y }, &self.img);
                 } else {
                     // Current pixel is not part of an object.
                     if let Some(marker) = newmarker {
@@ -213,7 +213,7 @@ impl<Img: Image, ObjPixels: PixelFolder> LutzState<Img, ObjPixels> {
                     });
                 } else {
                     // Append object to the current object.
-                    self.obj_stack.last_mut().unwrap().pixels.extend(store);
+                    self.obj_stack.last_mut().unwrap().pixels.merge(store);
                 }
                 PS::Object
             }
@@ -225,7 +225,7 @@ impl<Img: Image, ObjPixels: PixelFolder> LutzState<Img, ObjPixels> {
                     let obj = self.obj_stack.pop().unwrap();
                     // Join the two objects.
                     let new_top = self.obj_stack.last_mut().unwrap();
-                    new_top.pixels.extend(obj.pixels);
+                    new_top.pixels.merge(obj.pixels);
                     let k = obj.range.unwrap().start;
                     if new_top.range.is_none() {
                         new_top.range = Some(Range::from(k));
