@@ -1,6 +1,6 @@
 use iai::main;
 use image::GenericImageView;
-use once_cell::sync::OnceCell;
+use std::sync::OnceLock;
 
 #[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
 struct Pixel {
@@ -24,7 +24,7 @@ impl lutz::Image for Image {
     }
 }
 
-static IMG: OnceCell<Image> = OnceCell::new();
+static IMG: OnceLock<Image> = OnceLock::new();
 
 fn m100() -> Vec<Vec<lutz::Pixel>> {
     let img = IMG.get().unwrap();
