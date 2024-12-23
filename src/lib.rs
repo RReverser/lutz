@@ -1,9 +1,5 @@
-#![cfg_attr(
-    feature = "nightly",
-    feature(external_doc),
-    deny(missing_docs),
-    doc(include = "../README.md")
-)]
+#![doc = include_str!("../README.md")]
+#![deny(missing_docs)]
 
 /// A trait used to simulate monochrome images.
 #[auto_impl::auto_impl(&, &mut, Box, Rc, Arc)]
@@ -74,8 +70,14 @@ struct LutzState<Img, Pixels: PixelFolder<Img>> {
     store: Box<[Pixels]>,
 }
 
+/// A trait that allows to collect pixels into an object.
+///
+/// This trait is named similarly to the [`Iterator::fold`] method because it's
+/// similarly used to fold elements into a single value.
 pub trait PixelFolder<Img>: Default {
+    /// Add a pixel from the given image and coordinates to the object.
     fn push(&mut self, pixel: Pixel, image: &Img);
+    /// Merge another object into this one.
     fn merge(&mut self, other: Self);
 }
 

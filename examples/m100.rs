@@ -23,8 +23,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for obj_pixels in lutz::lutz::<_, Vec<_>>(&Image(img.to_luma8())) {
         writeln!(log, "{} {:?}", obj_pixels.len(), obj_pixels)?;
 
-        let mut min_x = u32::max_value();
-        let mut min_y = u32::max_value();
+        let mut min_x = u32::MAX;
+        let mut min_y = u32::MAX;
         let mut max_x = 0;
         let mut max_y = 0;
 

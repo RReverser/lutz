@@ -2,12 +2,6 @@ use iai::main;
 use image::GenericImageView;
 use std::sync::OnceLock;
 
-#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
-struct Pixel {
-    x: u32,
-    y: u32,
-}
-
 struct Image(image::GrayImage);
 
 impl lutz::Image for Image {
