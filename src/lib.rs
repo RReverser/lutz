@@ -112,12 +112,12 @@ impl<Img: Image, Pixels: PixelFolder<Img>> LutzState<Img, Pixels> {
 
     async fn run(mut self) {
         let width = self.img.width();
-        for y in 0..self.img.height() {
+        for y in 0..=self.img.height() {
             self.ps = PS::Complete;
             self.cs = CS::NonObject;
-            for x in 0..width {
+            for x in 0..=width {
                 let newmarker = self.marker[x as usize].take();
-                if self.img.has_pixel(x, y) {
+                if x != self.img.width() && y != self.img.height() && self.img.has_pixel(x, y) {
                     // Current pixel is part of an object.
                     if self.cs != CS::Object {
                         // Previous pixel is not part of an object, start a new segment.
@@ -142,14 +142,6 @@ impl<Img: Image, Pixels: PixelFolder<Img>> LutzState<Img, Pixels> {
                         self.end_segment(x);
                     }
                 }
-            }
-            // Handle the extra "M+1" cell from the algorithm
-            // (same logic as in the loop above, but without first branch).
-            if let Some(marker) = self.marker[width as usize].take() {
-                self.process_new_marker(marker, width).await;
-            }
-            if self.cs == CS::Object {
-                self.end_segment(width);
             }
         }
     }
@@ -268,4 +260,38 @@ impl<Img: Image, Pixels: PixelFolder<Img>> LutzState<Img, Pixels> {
 /// Main function that performs object detection in the provided image.
 pub fn lutz<Img: Image, Pixels: PixelFolder<Img>>(img: Img) -> impl IntoIterator<Item = Pixels> {
     genawaiter::rc::Gen::new(move |co| LutzState::new(img, co).run())
+}
+
+#[test]
+fn test_cshape() {
+    struct SampleImage {
+        img: image::GrayImage,
+    }
+
+    impl Image for SampleImage {
+        fn width(&self) -> u32 {
+            self.img.width()
+        }
+
+        fn height(&self) -> u32 {
+            self.img.height()
+        }
+
+        fn has_pixel(&self, x: u32, y: u32) -> bool {
+            self.img.get_pixel(x, y).0[0] > 20
+        }
+    }
+
+    let bytes = vec![
+        0, 99, 99, 99, 0, //
+        0, 99, 0, 89, 0, //
+        0, 0, 0, 99, 0, //
+        0, 99, 0, 99, 0, //
+        0, 99, 99, 99, 0, //
+    ];
+    let image = SampleImage {
+        img: image::GrayImage::from_vec(5, 5, bytes).unwrap(),
+    };
+    let blobs = lutz::<_, Vec<_>>(image).into_iter().collect::<Vec<_>>();
+    assert_eq!(1, blobs.len(), "Expected 1 blob, got {blobs:#?}");
 }
