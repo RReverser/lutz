@@ -258,8 +258,8 @@ impl<Img: Image, Pixels: PixelFolder<Img>> LutzState<Img, Pixels> {
 }
 
 /// Main function that performs object detection in the provided image.
-pub fn lutz<Img: Image, Pixels: PixelFolder<Img>>(img: Img) -> impl IntoIterator<Item = Pixels> {
-    genawaiter::rc::Gen::new(move |co| LutzState::new(img, co).run())
+pub fn lutz<Img: Image, Pixels: PixelFolder<Img>>(img: Img) -> impl Iterator<Item = Pixels> {
+    genawaiter::rc::Gen::new(move |co| LutzState::new(img, co).run()).into_iter()
 }
 
 #[test]
@@ -292,6 +292,6 @@ fn test_cshape() {
     let image = SampleImage {
         img: image::GrayImage::from_vec(5, 5, bytes).unwrap(),
     };
-    let blobs = lutz::<_, Vec<_>>(image).into_iter().collect::<Vec<_>>();
+    let blobs = lutz::<_, Vec<_>>(image).collect::<Vec<_>>();
     assert_eq!(1, blobs.len(), "Expected 1 blob, got {blobs:#?}");
 }
