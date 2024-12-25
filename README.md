@@ -32,7 +32,7 @@ impl lutz::Image for Image {
 Once constructed, a reference to such image should be passed to the `lutz` function. It will return an iterator over detected objects, each represented as a `Vec<Pixel>` of its pixel coordinates:
 
 ```rust,ignore
-for obj_pixels in lutz::lutz(&img) {
+for obj_pixels in lutz::lutz::<_, Vec<_>>(&img) {
     println!("{:?}", obj_pixels);
 }
 ```
